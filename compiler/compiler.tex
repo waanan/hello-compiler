@@ -1,0 +1,103 @@
+%!TEX program = xelatex
+
+\documentclass{progbookcn}
+\usepackage{wrapfig}
+\usepackage{enumerate}
+\usepackage{amsmath,mathrsfs,amsfonts}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{multirow,makecell}
+\usepackage{multicol}
+\usepackage{ulem} % \uline
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{fontawesome}
+\usepackage[open,openlevel=0,atend]{bookmark}
+
+\usepackage{imakeidx}
+\makeindex[%
+  intoc=true,
+  columns=2,
+  columnsep=1cm,
+  columnseprule=true
+]
+
+
+\begin{document}
+
+\include{title-page}
+
+\thispagestyle{empty}
+
+
+\frontmatter
+
+\include{preface}
+
+\include{introduction}
+
+
+%% 目录
+\clearpage
+{
+  \hypersetup{hidelinks}
+  \tableofcontents
+}
+
+
+\mainmatter
+
+\part{基础篇}
+
+\include{chapter_1}
+
+\include{chapter_2}
+
+\part{进阶篇}
+
+\part{应用篇}
+
+\bookmarksetup{startatroot}
+
+
+%% 附录
+\appendix
+\cleardoublepage
+
+
+%% appendix chapter style
+\titleformat{\chapter}[display]
+{\bfseries}
+{\flushright\zihao{4}附录\thechapter}
+{1ex}
+{
+  \hrule width \hsize height .5pt
+  \vspace{-2ex}\flushright\zihao{2}
+}[\vspace{5ex}]
+
+
+\chapter{Angular CLI}
+
+\begin{lstlisting}[language=bash,style=shellstyle]
+  ng new appname --style scss --skip-install
+\end{lstlisting}
+
+
+\backmatter
+
+
+\cleardoublepage
+%% 索引
+\printindex
+
+%% 参考文献
+\bibliographystyle{plain}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

@@ -1,0 +1,34 @@
+\chapter{加法器}
+
+本章需要处理的语言是一个加法器，该语言记为\textbf{L1}。源码通过词法分析，语法分析，转换为抽象语法树（abstract syntax code,AST）。接着抽象语法树打平为类似汇编的语言。最后经过栈上空间分配以及略微修正，得到X84-64汇编。通过gcc编译器，就可以将得到的汇编代码变成可执行文件在机器上运行。
+
+\section{抽象语法树}
+
+
+
+\section{scan\&parse}
+
+\begin{lstlisting}[%
+  language=python,
+  caption={scan\&parse}
+]
+def scan(code):
+    return code.replace("(", " ( ").replace(")", " ) ").split()
+
+def parse(tokens):
+    if len(tokens) == 0:
+        raise SyntaxError("Meet unexpected EOF")
+    token = tokens.pop(0)
+    if token == '(':
+        exp_lst = []
+        while tokens[0] != ')':
+            exp_lst.append(parse(tokens))
+        tokens.pop(0)    # pop off ')'
+        return exp_lst
+    elif token == ')':
+        raise SyntaxError('unexpected )')
+    elif token[0].isdigit():
+        return int(token)
+    else:
+        return token
+\end{lstlisting}

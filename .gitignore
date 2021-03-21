@@ -1,0 +1,17 @@
+*.toc
+*.aux
+.texpadtmp
+*.pdf
+~$figures.pptx
+*.idx
+*.ilg
+*.ind
+
+*.synctex(busy)
+*.bbl
+*.blg
+*.log
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.out
