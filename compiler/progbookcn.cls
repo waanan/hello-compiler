@@ -215,6 +215,12 @@
   morestring=[b]"
 }
 
+\lstdefinelanguage{lisp}{
+  keywords={let},
+  sensitive=true,
+  comment=[l]{\#}
+}
+
 \lstdefinelanguage{python}{
   keywords={None,and,as,assert,break,class,continue,def,del,elif,else,except,finally,for,from,global,if,import,SyntaxError,
 in,is,lambda,nonlocal,not,or,pass,print,raise,return,try,while,with,yield,repea,Exception,False,True,abs,all,any,ascii,bin,bool,bytearray,

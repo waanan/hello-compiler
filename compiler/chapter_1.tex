@@ -4,6 +4,55 @@
 
 \section{抽象语法树}
 
+下面给出\textbf{L1}语言的一些例子。如下所示，“42”、“(+ 1 2)”、“(+ (+ 1 2) (+ 3 4))”分别是三个不同的程序。它们的运行结果分别为“42”、“3”与“10”。感兴趣的同学可以下载一个lisp环境比如racket来体验一下交互式的操作。
+
+\begin{lstlisting}[%
+  language=lisp,
+  caption={L1语言样例}
+]
+# 一个数字是一个合法的程序
+42
+=> 42
+
+# 加法程序
+(+ 1 2)
+=> 3
+
+# 嵌套的加法
+(+ (+ 1 2) (+ 3 4))
+=> 10
+\end{lstlisting}
+
+
+\textbf{L1}语言的语法描述如下。
+
+\begin{equation}
+\begin{aligned}
+  \label{eq:1}
+   Program \quad &::= \quad Exp \\
+   Exp \quad &::= \quad (+ \quad Exp \quad Exp) \\
+   Exp \quad &::=  \quad Int
+\end{aligned}
+\end{equation}
+
+第一个规则，说明我们的程序只含有一个表达式Exp，第二个规则表明(+ Exp Exp)是一个表达式，第三个规则表明整数也是一个表达式。在这个定义中，有如下几部分。
+
+\begin{itemize}
+  \item \textbf{非终结符}。需要推导成其它组成元素的就是非终结符。非终结符以大写字母开头，比如Exp。
+  \item \textbf{终结符}。不能往下推导的元素是终结符.如上例中的+、(、)，或者是以小写字母开头的字符串。
+  \item \textbf{产生式}。推导规则就是产生式.产生式的左边一定是一个非终结符,右边是终结符和非终结符组合而成.左右以“::=”分割。
+\end{itemize}
+
+上面的语法，可以简写为下面的形式。左部相同的产生式可以缩为一行。用“|”分割,代表“or”，含义是或者。
+
+\begin{equation}
+\begin{aligned}
+  \label{eq:2}
+   Program \quad &::= \quad Exp \\
+   Exp \quad &::= \quad (+ \quad Exp \quad Exp) \quad | \quad Int
+\end{aligned}
+\end{equation}
+
 
 
 \section{scan\&parse}
