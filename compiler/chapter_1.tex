@@ -13,11 +13,9 @@
 # 一个数字是一个合法的程序
 42
 => 42
-
 # 加法程序
 (+ 1 2)
 => 3
-
 # 嵌套的加法
 (+ (+ 1 2) (+ 3 4))
 => 10
@@ -53,9 +51,35 @@
 \end{aligned}
 \end{equation}
 
+程序嵌套的语法结构，非常适合用树来进行表示。上述的3段代码其实对应3个树形的结构，见下图的a、b、c。叶子节点对应的是终结符，从父节点到其子节点的关系则对应一个产生式。
+
+\begin{figure}[ht]
+\centering
+\includegraphics[scale=1]{figs/c1/pic1.png}
+\caption{语法树}
+\label{fig:fig1}
+\end{figure}
+
+本书采用Python中的list来表示这种嵌套的语法。\textbf{L1}语言中的Int直接用Python中的整数进行表示，“+”的操作符用字符串来表示，语法树的嵌套的结构则用嵌套的list进行表示。下面的代码就是a、b、c所对应的Python表示。
+
+\begin{lstlisting}[%
+  language=python,
+  caption={语法树在python中表示}
+]
+# 一个数字是一个合法的程序
+tree1 = 42
+# 加法程序
+tree2 = ["+", 1, 2]
+# 嵌套的加法
+tree3 = ["+", ["+", 1, 2], ["+", 3, 4]]
+\end{lstlisting}
+
+下一步，就是将字符串表示的程序，转换成上述的list结构。
 
 
 \section{scan\&parse}
+
+
 
 \begin{lstlisting}[%
   language=python,
