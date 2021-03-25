@@ -79,7 +79,7 @@ tree3 = ["+", ["+", 1, 2], ["+", 3, 4]]
 
 \section{scan\&parse}
 
-
+经过观察，可以发现\textbf{L1}语言中的元素，除了“(”“)”，其它大部分都是按照空格分开的。可以将括号左右都添加上空格，然后按照空格切分，就可以将代码中的每个元素都装到一个list中。“(+ (+ 1 2) (+ 3 4))”通过scan函数，就会转换为["(", "+", "(", "+", "1", "2", ")", "(", "+", "3", "4", ")", ")"]。列表中的每个元素，都是一个token。这一步，就是一个简单的词法分析过程，将源码转换为token的列表。
 
 \begin{lstlisting}[%
   language=python,
@@ -90,7 +90,7 @@ def scan(code):
 
 def parse(tokens):
     if len(tokens) == 0:
-        raise SyntaxError("Meet unexpected EOF")
+        raise SyntaxError("Parse Err: Unexpected EOF")
     token = tokens.pop(0)
     if token == '(':
         exp_lst = []
@@ -99,9 +99,167 @@ def parse(tokens):
         tokens.pop(0)    # pop off ')'
         return exp_lst
     elif token == ')':
-        raise SyntaxError('unexpected )')
-    elif token[0].isdigit():
+        raise SyntaxError('Parse Err: Unexpected )')
+    elif token[0].isdigit() or token[0] == "-":
         return int(token)
     else:
         return token
+\end{lstlisting}
+
+接下来，采用递归下降的方式，将token列表转换为语法树。每次从token列表中取第一个token。
+\begin{itemize}
+  \item 读到“(”，说明需要新建一个列表。递归的调用parse函数，将解析出的表达式exp放入新的列表中，直到读到“)”为止。
+  \item 读到“）”，不符合语法，抛出异常。
+  \item token的第一个字符是数字或者减号，说明读到一个数字，将其从字符串转换为整数返回。
+  \item 其它情况，就是读到标识符。以字符串形式返回即可。
+\end{itemize}
+
+经过parse函数处理，就会将上述的token列表转换为["+", ["+", 1, 2], ["+", 3, 4]]，嵌套的结构正好对应语法树。这一步，就是一个简单的语法分析过程，将token列表解析为语法树，为后续的处理打下基础。
+
+\section{语法树打平}
+
+\begin{lstlisting}[%
+  language=python,
+  caption={flatten}
+]
+class Symbols:
+    symbol_dict = {}
+
+    @staticmethod
+    def get_new_symbol(var):
+        if var not in Symbols.symbol_dict:
+            Symbols.symbol_dict[var] = 1
+        else:
+            Symbols.symbol_dict[var] += 1
+        return var + "." + str(Symbols.symbol_dict[var])
+
+class Flatten:
+    def __init__(self, exp):
+        self.exp = exp
+        self.op_lst = []
+    
+    def flatten(self, exp):
+        exp_type = type(exp)
+        if exp_type in (int, str):
+            return exp
+        elif exp_type == list:
+            if exp[0] == "+":
+                exp1 = self.flatten(exp[1])
+                exp2 = self.flatten(exp[2])
+                tmp_var = Symbols.get_new_symbol("tmp")
+                self.op_lst.append(("assign", tmp_var, ("+", exp1, exp2)))
+                return tmp_var
+        raise SyntaxError('Flatten Err: Unkown Exp {}'.format(exp))
+
+    def run(self):
+        final_exp = self.flatten(self.exp)
+        self.op_lst.append(("return", final_exp))
+\end{lstlisting}
+
+
+\section{选择合适x86代码}
+
+\begin{lstlisting}[%
+  language=python,
+  caption={select\_instruction}
+]
+def mark_val(val):
+    if type(val) == int:
+        return "int", val
+    else:
+        return "var", val
+
+def select_instruction(op_lst):
+    new_op_lst = []
+    for inst in op_lst:
+        if inst[0] == "assign":
+            var = inst[1]
+            add_exp = inst[2]
+            add_exp1 = add_exp[1]
+            add_exp2 = add_exp[2]
+            new_op_lst.append(("movq", mark_val(add_exp1), ("var", var)))
+            new_op_lst.append(("addq", mark_val(add_exp2), ("var", var)))
+        elif inst[0] == "return":
+            new_op_lst.append(("movq", mark_val(inst[1]), ("reg", "rax")))
+    return new_op_lst
+\end{lstlisting}
+
+\section{分配栈上空间}
+
+\begin{lstlisting}[%
+  language=python,
+  caption={assign\_home}
+]
+class StackFrame:
+    symbol_pos_dict = {}
+    frame_size = 0
+
+def get_var_pos(arg):
+    if arg[0] == "var":
+        return ("deref", "rbp", StackFrame.symbol_pos_dict[arg[1]])
+    else:
+        return arg
+
+def assign_home(op_lst):
+    base = 0
+    for var, count in Symbols.symbol_dict.items():
+        StackFrame.frame_size += 8 * count
+        for i in range(count):
+            base = base - 8
+            StackFrame.symbol_pos_dict[var + "." + str(i+1)] = base
+    if StackFrame.frame_size % 16 != 0:
+        StackFrame.frame_size += 8
+    new_op_lst = []
+    for inst in op_lst:
+        new_op_lst.append((inst[0], 
+                            get_var_pos(inst[1]), 
+                            get_var_pos(inst[2])))
+    return new_op_lst
+\end{lstlisting}
+
+
+\section{代码修正}
+
+\begin{lstlisting}[%
+  language=python,
+  caption={patch\_instuction}
+]
+def patch_instuction(op_lst):
+    new_op_lst = []
+    for inst in op_lst:
+        arg1 = inst[1]
+        arg2 = inst[2]
+        if arg1[0] == "deref" and arg2[0] == "deref":
+            new_op_lst.append(("movq", arg1, ("reg", "rax")))
+            new_op_lst.append((inst[0], ("reg", "rax"), arg2))
+        else:
+            new_op_lst.append(inst)
+    return new_op_lst
+\end{lstlisting}
+
+\section{产出汇编代码}
+
+\begin{lstlisting}[%
+  language=python,
+  caption={print\_x84\_64}
+]
+def trans_operand_to_str(operand):
+    if operand[0] == "int":
+        return "$" + str(operand[1])
+    elif operand[0] == "deref":
+        return str(operand[2]) + "(%" + operand[1] + ")"
+    elif operand[0] == "reg":
+        return "%" + operand[1]
+
+def print_x84_64(op_lst):
+    print("    .global main")
+    print("main:")
+    print("    pushq %rbp")
+    print("    movq %rsp, %rbp")
+    print("    subq $" + str(StackFrame.frame_size) + ", %rsp")
+    for inst in op_lst:
+        print("    " + inst[0] + " " + trans_operand_to_str(inst[1]) + ", " + trans_operand_to_str(inst[2]))
+    print("    addq $" + str(StackFrame.frame_size) + ", %rsp")
+    print("    popq %rbp")
+    print("    retq")
 \end{lstlisting}
