@@ -49,15 +49,42 @@
 
 \mainmatter
 
-\part{基础篇}
+\part{青铜篇}
 
-\include{chapter_1}
+\include{adder}
 
-\include{chapter_2}
+\include{let}
 
-\part{进阶篇}
+\include{reg}
 
-\part{应用篇}
+\include{branch}
+
+\part{白银篇}
+
+\include{dynamicType}
+
+\include{symbol}
+
+\include{tuple}
+
+\include{func}
+
+\part{黄金篇}
+
+\include{gc}
+
+\include{highOrderFunc}
+
+\include{cse}
+
+\include{inline}
+
+\part{钻石篇}
+
+\include{symbolCal}
+
+\include{metaInterpreter}
+
 
 \bookmarksetup{startatroot}
 
@@ -65,24 +92,6 @@
 %% 附录
 \appendix
 \cleardoublepage
-
-
-%% appendix chapter style
-\titleformat{\chapter}[display]
-{\bfseries}
-{\flushright\zihao{4}附录\thechapter}
-{1ex}
-{
-  \hrule width \hsize height .5pt
-  \vspace{-2ex}\flushright\zihao{2}
-}[\vspace{5ex}]
-
-
-\chapter{Angular CLI}
-
-\begin{lstlisting}[language=bash,style=shellstyle]
-  ng new appname --style scss --skip-install
-\end{lstlisting}
 
 
 \backmatter
