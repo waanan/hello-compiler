@@ -222,7 +222,7 @@
 }
 
 \lstdefinelanguage{python}{
-  keywords={None,and,as,assert,break,class,continue,def,del,elif,else,except,finally,for,from,global,if,import,SyntaxError,
+  keywords={None,and,as,assert,break,class,continue,def,del,elif,else,except,finally,for,from,global,if,import,SyntaxError,@staticmethod,
 in,is,lambda,nonlocal,not,or,pass,print,raise,return,try,while,with,yield,repea,Exception,False,True,abs,all,any,ascii,bin,bool,bytearray,
 bytes,callable,chr,classmethod,compile,complex,copyright,delattr,dict,
 dir,divmod,enumerate,eval,exec,exit,float,format,frozenset,getattr,

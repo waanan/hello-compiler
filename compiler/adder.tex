@@ -4,7 +4,7 @@
 
 \section{抽象语法树}
 
-下面给出\textbf{L1}语言的一些例子。如下所示，“42”、“(+ 1 2)”、“(+ (+ 1 2) (+ 3 4))”分别是三个不同的程序。它们的运行结果分别为“42”、“3”与“10”。感兴趣的同学可以下载一个lisp环境比如racket来体验一下交互式的操作。
+下面给出\textbf{L1}语言的一些例子。如下所示，“42”、“(+ 1 2)”、“(+ (+ 1 2) (+ 3 4))”分别是三个不同的程序。它们的运行结果分别为“42”、“3”与“10”。为了解析简单，\textbf{L1}语言采用的是带括号的前缀语法，根据括号中的第一个符号，就可以判断出表达式的类型。
 
 \begin{lstlisting}[%
   language=lisp,
@@ -74,7 +74,7 @@ tree2 = ["+", 1, 2]
 tree3 = ["+", ["+", 1, 2], ["+", 3, 4]]
 \end{lstlisting}
 
-下一步，就是将字符串表示的程序，转换成上述的list结构。
+现在的问题，就是要将字符串表示的程序，转换成上述的list结构。
 
 
 \section{scan\&parse}
@@ -130,7 +130,7 @@ def parse(tokens):
 \end{aligned}
 \end{equation}
 
-实际处理起来，相当于对\textbf{L1}语言的语法树进行了一次深度优先遍历。在遍历过程中，每次遇到“+”节点，按照遍历的顺序，就会产生一个临时变量，这里使用一个符号词典Symbols.symbol\_dict来记录所有的变量及对应的序号。
+实际处理起来，相当于对\textbf{L1}语言的语法树进行了一次深度优先遍历。在遍历过程中，每次遇到“+”节点，按照遍历的顺序，就会产生一个临时变量，这里使用一个符号词典Symbols.symbol\_dict来记录所有的变量及目前对应的序号,初始序号记为1。按顺次调用Symbols.get\_new\_symbol("tmp")，就会依次产出“tmp.1”、“tmp.2”、“tmp.3”…。
 
 \begin{figure}[ht]
 \centering
@@ -146,7 +146,6 @@ def parse(tokens):
 ]
 class Symbols:
     symbol_dict = {}
-
     @staticmethod
     def get_new_symbol(var):
         if var not in Symbols.symbol_dict:
@@ -178,11 +177,19 @@ class Flatten:
         self.op_lst.append(("return", final_exp))
 \end{lstlisting}
 
-Flatten使用op\_lst来记录在遍历语法树的过程中产生的assign操作。
+Flatten构造时传入一棵语法树，通过run函数来开始执行，使用op\_lst来记录在遍历语法树的过程中产生的操作。
+
+其中flatten函数根据输入的表达式，将其转换为int或者是一个变量进行返回。
+\begin{itemize}
+  \item 如果输入的是变量或int，直接返回。
+  \item 如果是加法表达式，先递归的处理左子树和右子树，得到它们的处理结果exp1和exp2。然后Symbols中获取一个全新的tmp变量，将其与exp1、exp2产生一个新的assign操作。最后返回新生成的这个tmp变量。
+\end{itemize}
+
+最后，将整个表达式flatten之后的结果，拼装一个return语句即可。
 
 \begin{lstlisting}[%
   language=python,
-  caption={flatten结果}
+  caption={Flatten结果}
 ]
 # 语法树
 ['+', ['+', 1, 2], ['+', 3, 4]]
@@ -194,6 +201,18 @@ Flatten使用op\_lst来记录在遍历语法树的过程中产生的assign操作
 \end{lstlisting}
 
 \section{选择合适x86代码}
+
+\textbf{Flat}语言是一个平整的语言，与汇编代码只有些微的差别。但将其直接转变为汇编仍有些不好处理，因此引入一个扩展的x86语言，\textbf{x86-E}语言。\textbf{x86-E}语言仍然保留变量的设定，同时引入寄存器的概念。
+
+\begin{equation}
+\begin{aligned}
+  \label{eq:4}
+   Program \quad &::= \quad { MovOrAddExp }^* \\
+   MovOrAddExp \quad &::= \quad \{ movq \quad | \quad addq \} \quad S \quad  D  \\
+   S \quad &::= \quad Reg \quad | \quad Var \quad | \quad Int \\
+   D \quad &::=  \quad Reg \quad | \quad Var
+\end{aligned}
+\end{equation}
 
 \begin{lstlisting}[%
   language=python,
@@ -369,3 +388,5 @@ main:
   ./add
   echo $?
 \end{lstlisting}
+
+\section{小结}
