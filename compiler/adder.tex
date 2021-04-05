@@ -1,10 +1,10 @@
 \chapter{加法器}
 
-本章需要处理的语言是一个加法器，该语言记为\textbf{L1}。源码通过词法分析，语法分析，转换为抽象语法树（abstract syntax code,AST）。接着将抽象语法树打平为类似汇编的语言。最后经过栈上空间分配以及修正，得到X84-64汇编。通过gcc编译器，就可以将得到的汇编代码变成可执行文件在机器上运行。
+本章需要处理的语言是一个加法器，该语言记为\textbf{Adder}。源码通过词法分析，语法分析，转换为抽象语法树（abstract syntax code,AST）。接着将抽象语法树打平为类似汇编的语言。最后经过栈上空间分配以及修正，转换为X84-64汇编代码。通过gcc编译器，就可以将得到的汇编代码变成可执行文件在机器上运行。
 
 \section{抽象语法树}
 
-下面给出\textbf{L1}语言的一些例子。如下所示，“42”、“(+ 1 2)”、“(+ (+ 1 2) (+ 3 4))”分别是三个不同的程序。它们的运行结果分别为“42”、“3”与“10”。为了解析简单，\textbf{L1}语言采用的是带括号的前缀语法，根据括号中的第一个符号，就可以判断出表达式的类型。
+下面给出\textbf{Adder}语言的一些例子。如下所示，“42”、“(+ 1 2)”、“(+ (+ 1 2) (+ 3 4))”分别是三个不同的程序。它们的运行结果分别为“42”、“3”与“10”。为了解析简单，\textbf{Adder}语言采用的是带括号的前缀语法，根据括号中的第一个符号，就可以判断出表达式的类型。
 
 \begin{lstlisting}[%
   language=lisp,
@@ -22,7 +22,7 @@
 \end{lstlisting}
 
 
-\textbf{L1}语言的语法描述如下。
+\textbf{Adder}语言的语法描述如下。
 
 \begin{equation}
 \begin{aligned}
@@ -41,7 +41,7 @@
   \item \textbf{产生式}。推导规则就是产生式.产生式的左边一定是一个非终结符,右边是终结符和非终结符组合而成.左右以“::=”分割。
 \end{itemize}
 
-上面的语法，可以简写为下面的形式。左部相同的产生式可以缩为一行。用“|”分割,代表“or”，含义是或者。
+上述的语法，可以简写为下面的形式。左部相同的产生式可以缩为一行。用“|”分割,代表“or”，含义是或者。
 
 \begin{equation}
 \begin{aligned}
@@ -60,7 +60,7 @@
 \label{fig:fig1}
 \end{figure}
 
-本书采用Python中的list来表示这种嵌套的语法。\textbf{L1}语言中的Int直接用Python中的整数进行表示，“+”的操作符用字符串来表示，语法树的嵌套的结构则用嵌套的list进行表示。下面的代码就是a、b、c所对应的Python表示。
+本书采用Python中的list来表示这种嵌套的语法。\textbf{Adder}语言中的Int直接用Python中的整数进行表示，“+”的操作符用字符串来表示，语法树的嵌套的结构则用嵌套的list进行表示。下面的代码就是a、b、c所对应的Python表示。
 
 \begin{lstlisting}[%
   language=python,
@@ -74,12 +74,12 @@ tree2 = ["+", 1, 2]
 tree3 = ["+", ["+", 1, 2], ["+", 3, 4]]
 \end{lstlisting}
 
-现在的问题，就是要将字符串表示的程序，转换成上述的list结构。
+现在的问题，要将字符串表示的程序，转换成上述的list结构。
 
 
 \section{scan\&parse}
 
-经过观察，可以发现\textbf{L1}语言中的元素，除了“(”“)”，其它大部分都是按照空格分开的。可以将括号左右都添加上空格，然后按照空格切分，就可以将代码中的每个元素都装到一个list中。“(+ (+ 1 2) (+ 3 4))”通过scan函数，就会转换为["(", "+", "(", "+", "1", "2", ")", "(", "+", "3", "4", ")", ")"]。列表中的每个元素，都是一个token。这一步，就是一个简单的词法分析过程，将源码转换为token的列表。
+经过观察，可以发现\textbf{Adder}语言中的元素，除了“(”“)”，其它大部分都是按照空格分开的。可以将括号左右都添加上空格，然后按照空格切分，就可以将代码中的每个元素都装到一个list中。“(+ (+ 1 2) (+ 3 4))”通过scan函数，就会转换为["(", "+", "(", "+", "1", "2", ")", "(", "+", "3", "4", ")", ")"]。列表中的每个元素，都是一个token。此步就是一个简单的词法分析过程，将源码转换为token的列表。
 
 \begin{lstlisting}[%
   language=python,
@@ -110,15 +110,15 @@ def parse(tokens):
 \begin{itemize}
   \item 读到“(”，说明需要新建一个列表。递归的调用parse函数，将解析出的表达式exp放入新的列表中，直到读到“)”为止。
   \item 读到“）”，不符合语法，抛出异常。
-  \item token的第一个字符是数字或者减号，说明读到一个数字，将其从字符串转换为整数返回。
+  \item token的第一个字符是数字或者减号（负数的情况），说明读到一个数字，将其从字符串转换为整数返回。
   \item 其它情况，就是读到标识符。以字符串形式返回即可。
 \end{itemize}
 
-经过parse函数处理，就会将上述的token列表转换为["+", ["+", 1, 2], ["+", 3, 4]]，嵌套的结构正好对应语法树。这一步，就是一个简单的语法分析过程，将token列表解析为语法树，为后续的处理打下基础。
+经过parse函数处理，会将上述的token列表转换为["+", ["+", 1, 2], ["+", 3, 4]]，嵌套的结构正好对应语法树。此步是一个简单的语法分析过程，将token列表解析为语法树，为后续的处理打下基础。
 
 \section{语法树打平}
 
-汇编语言是平铺的语言，并无树形的代码结构。因此需要将语法树按照执行的顺序进行打平。打平后的相当于是一个更加接近于汇编语法的语言。打平后的语法如下，记为\textbf{Flat}语言。其中“*”代表出现0次或者多次。
+汇编语言是平铺的语言，并无树形的代码结构。因此需要将语法树按照执行的顺序进行打平。打平后的语言更加接近于汇编语法。打平后的语法如下，记为\textbf{Flat}语言。其中“*”代表出现0次或者多次。
 
 \begin{equation}
 \begin{aligned}
@@ -130,9 +130,9 @@ def parse(tokens):
 \end{aligned}
 \end{equation}
 
-\textbf{Flat}语言由0个或者多个Assign表达式，以及一个Return表达式组成。Assign表达式将两个Simple表达式的和赋值给变量Var。Simple表达式则是Int或者变量Var。Return表达式则将一个Simple表达式进行返回，代表返回整个程序运行后的值。
+\textbf{Flat}语言由0个或者多个Assign表达式，以及一个Return表达式组成。Assign表达式将两个Simple表达式相加的结果，赋值给变量Var。Simple表达式则是Int或者变量Var。Return表达式返回一个Simple表达式，代表返回整个程序运行后的值。
 
-打平实际处理起来，相当于对\textbf{L1}语言的语法树进行了一次深度优先遍历。在遍历过程中，每次遇到“+”节点，按照遍历的顺序，就会产生一个临时变量，这里使用一个符号词典Symbols.symbol\_dict来记录所有的变量及目前对应的序号,初始序号记为1。按顺次调用Symbols.get\_new\_symbol("tmp")，就会依次产出“tmp.1”、“tmp.2”、“tmp.3”…。
+打平实际处理起来，相当于对\textbf{Adder}语言的语法树进行了一次深度优先遍历。在遍历过程中，每次遇到“+”节点，就会产生一个临时变量，这里使用一个符号词典Symbols.symbol\_dict来记录所有的变量及目前对应的序号,初始序号记为1。按顺次调用Symbols.get\_new\_symbol("tmp")，就会依次产出“tmp.1”、“tmp.2”、“tmp.3”…。
 
 \begin{figure}[ht]
 \centering
@@ -218,7 +218,7 @@ Flatten构造时传入一棵语法树，通过run函数来开始执行，使用o
 \end{aligned}
 \end{equation}
 
-\textbf{x86-E}语言以多个Move或者Add表达式组成。S（source）代表的是源数据，D（destination）代表的是目标地址。movq代表将S中存储的值移动到D中。addq代表中S+D的值赋值给D。movq和addq中的“q”代表的操作的是64位即8byte的数据。S可以是寄存器Reg、变量Var或者整数Int。D可以是寄存器Reg或者变量Var。目前只会用到一个64位的寄存器rax，最终的返回值需要放入其中。
+\textbf{x86-E}语言以多个Move或者Add表达式组成。S（source）代表的是源数据，D（destination）代表的是目标地址。movq代表将S中存储的值移动到D中。addq代表中S+D的值赋值给D。movq和addq中的“q”代表操作的是64位即8byte的数据。S可以是寄存器Reg、变量Var或者整数Int。D可以是寄存器Reg或者变量Var。目前只会用到一个64位的寄存器rax，最终返回值需要放入其中。
 
 \begin{lstlisting}[%
   language=python,
@@ -245,7 +245,7 @@ def select_instruction(op_lst):
     return new_op_lst
 \end{lstlisting}
 
-转换的逻辑十分简单，对于Assign，产出一个movq以及addq指令。先将“+”法的第一个参数移动到变量中，再讲第二个参数加到变量里即可。对于Return，直接将对应的数据直接移动到寄存器rax中即可。
+转换逻辑十分简单，对于Assign，产出一个movq以及addq指令。先将“+”法的第一个参数移动到变量中，再将第二个参数加到变量里。对于Return，直接将对应的数据直接移动到寄存器rax中。
 
 下面是执行完select\_instruction之后的产出结果。
 
@@ -264,7 +264,7 @@ def select_instruction(op_lst):
 
 \section{分配栈上空间}
 
-变量需要在内存中进行存放，这里选择在栈上来存放它们。寄存器rbp是当前函数运行栈的基准位置，栈的位置是向下生长，每个变量都是64位8byte。因此，这些变量分配的位置就是栈的基准位置-8，-16，…。rsp则是指向栈顶的寄存器，在程序开始执行前，需要移动栈顶来为程序执行分配足够的空间。
+变量在内存中进行存放，这里选择在栈上来存放它们。寄存器rbp是当前函数运行栈的基准位置，栈是向下生长的，每个变量都是64位。因此，这些变量分配的位置就是栈的基准位置-8，-16，…。rsp则是指向栈顶的寄存器，在程序开始执行前，需要移动栈顶来为程序执行分配足够的空间。
 
 \begin{figure}[ht]
 \centering
@@ -314,7 +314,7 @@ def assign_home(op_lst):
     return new_op_lst
 \end{lstlisting}
 
-StackFrame中symbol\_pos\_dict用来记录每个变量相较于rbp的偏移量，frame\_size则用来记录需要占用的栈的大小。get\_var\_pos用来完成从Var到Deref的转换。在assign\_home中，依次为每个变量计算偏移量，另外，栈上分配的空间大小需要16byte对齐，在计算frame\_size需要多加留意。之后，对每条指令替换Var为Deref即可。
+StackFrame中symbol\_pos\_dict用来记录每个变量相较于rbp的偏移量，frame\_size用来记录需要占用的栈的大小。get\_var\_pos用来完成从Var到Deref的转换。在assign\_home中，依次为每个变量计算偏移量，另外，栈上分配的空间大小需要16byte对齐，在计算frame\_size要多加留意。之后，对每条指令替换Var为Deref即可。
 
 下面是执行完assign\_home之后的产出结果。
 
@@ -376,14 +376,14 @@ def patch_instuction(op_lst):
 到此为止，已经完成了整个编译的流程，接下来需要将整个程序转变为可执行的文件。本书选择将代码输出为AT\&T样式的x86汇编，然后使用gcc来将汇编转变为可执行文件。需要注意以下几点。
 
 \begin{itemize}
-  \item “main:”是整个程序执行的入口，“.global main”表示main这个符号对外部链接器可见，链接完后的程序从此处开始执行。如果是Mac系统，则需要改为“\_main”。
-  \item 寄存器，需要在其前面添加\%，例如\%rax。
-  \item 数字，需要在前面添加\$，比如数字“1”，需要写作“\$1”。
-  \item 寄存器相对位置寻址，采用括号扩住寄存器，在括号前加偏移量的语法。例如-8(\%rbp)，代表是相对于\%rbp寄存器中存储的地址减去8所指向的内存中的内容。
+  \item “main:”是整个程序执行的入口，“.global main”表示main这个符号对外部链接器可见，链接完后的程序从此处开始执行。如果是Mac系统，需要改为“\_main”。
+  \item 寄存器，在其前面添加\%，例如\%rax。
+  \item 数字，在前面添加\$，比如数字“1”，需要写作“\$1”。
+  \item 寄存器相对位置寻址，采用括号扩住寄存器，在括号前加偏移量的语法。例如-8(\%rbp)，代表是相对于\%rbp寄存器中存储的地址减去8byte所指向的内存中的内容。
   \item 开始执行时，需要“pushq \%rbp”，“movq \%rsp, \%rbp”，保存旧rbp的值，然后将当前栈顶rsp作为当前栈的基址rbp。在执行结束后，执行相对应的“popq \%rbp”，恢复rbp为之前保留的值。
-  \item 执行程序前，将rsp减去整个程序assign\_home里分配的空间大小，执行结束后，需要加回对应的大小。
+  \item 执行程序前，将rsp减去程序assign\_home里分配的空间大小，执行结束后，需要加回对应的大小。
   \item 寄存器rax被用来存放函数的返回值，最终整个程序的执行结果放在寄存器rax中。
-  \item retq最终结束整个程序，返回执行结果。
+  \item retq结束程序，返回执行结果。
 \end{itemize}
 
 
@@ -455,12 +455,12 @@ echo $?
 
 \begin{itemize}
   \item 为了能识别每个表达式，通过scan\&parse将代码文本解析为抽象语法树。
-  \item 通过flatten，将抽象语法树打平，转变为类似汇编的结果。
-  \item 通过select\_instruction，得到与汇编基本一致的操作符。
-  \item 通过assign home，为每个变量在栈上分配空间。
-  \item 通过patch，将非法指令转变为合法的指令。
-  \item 通过print操作，打印出AT\&T格式的x86汇编。
-  \item 通过gcc，将汇编代码转换为可执行文件。
+  \item flatten，将抽象语法树打平，转变为类似汇编的结果。
+  \item select\_instruction，得到与汇编基本一致的操作符。
+  \item assign home，为每个变量在栈上分配空间。
+  \item patch，将非法指令转变为合法的指令。
+  \item print操作，打印出AT\&T格式的x86汇编。
+  \item gcc，将汇编代码转换为可执行文件。
 \end{itemize}
 
 \begin{figure}[ht]
