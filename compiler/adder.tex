@@ -55,7 +55,7 @@
 
 \begin{figure}[ht]
 \centering
-\includegraphics[scale=0.8]{figs/c1/pic1.eps}
+\includegraphics[scale=0.3]{figs/c1/pic1.png}
 \caption{语法树}
 \label{fig:fig1}
 \end{figure}
@@ -118,7 +118,7 @@ def parse(tokens):
 
 \section{语法树打平}
 
-汇编语言是平铺的语言，并无树形的代码结构。因此需要将语法树按照执行的顺序进行打平。打平后的相当于是一个更加接近于汇编语法的语言。打平后的语法如下，记为\textbf{Flat}语言。
+汇编语言是平铺的语言，并无树形的代码结构。因此需要将语法树按照执行的顺序进行打平。打平后的相当于是一个更加接近于汇编语法的语言。打平后的语法如下，记为\textbf{Flat}语言。其中“*”代表出现0次或者多次。
 
 \begin{equation}
 \begin{aligned}
@@ -130,11 +130,13 @@ def parse(tokens):
 \end{aligned}
 \end{equation}
 
-实际处理起来，相当于对\textbf{L1}语言的语法树进行了一次深度优先遍历。在遍历过程中，每次遇到“+”节点，按照遍历的顺序，就会产生一个临时变量，这里使用一个符号词典Symbols.symbol\_dict来记录所有的变量及目前对应的序号,初始序号记为1。按顺次调用Symbols.get\_new\_symbol("tmp")，就会依次产出“tmp.1”、“tmp.2”、“tmp.3”…。
+\textbf{Flat}语言由0个或者多个Assign表达式，以及一个Return表达式组成。Assign表达式将两个Simple表达式的和赋值给变量Var。Simple表达式则是Int或者变量Var。Return表达式则将一个Simple表达式进行返回，代表返回整个程序运行后的值。
+
+打平实际处理起来，相当于对\textbf{L1}语言的语法树进行了一次深度优先遍历。在遍历过程中，每次遇到“+”节点，按照遍历的顺序，就会产生一个临时变量，这里使用一个符号词典Symbols.symbol\_dict来记录所有的变量及目前对应的序号,初始序号记为1。按顺次调用Symbols.get\_new\_symbol("tmp")，就会依次产出“tmp.1”、“tmp.2”、“tmp.3”…。
 
 \begin{figure}[ht]
 \centering
-\includegraphics[scale=0.8]{figs/c1/pic2.eps}
+\includegraphics[scale=0.3]{figs/c1/pic2.png}
 \caption{深度优先遍历产生临时变量}
 \label{fig:fig2}
 \end{figure}
@@ -187,6 +189,8 @@ Flatten构造时传入一棵语法树，通过run函数来开始执行，使用o
 
 最后，将整个表达式flatten之后的结果，拼装一个return语句即可。
 
+如下，本章后续均以“(+ (+ 1 2) (+ 3 4))”来展示函数执行后的结果。
+
 \begin{lstlisting}[%
   language=python,
   caption={Flatten结果}
@@ -202,17 +206,19 @@ Flatten构造时传入一棵语法树，通过run函数来开始执行，使用o
 
 \section{选择合适x86代码}
 
-\textbf{Flat}语言是一个平整的语言，与汇编代码只有些微的差别。但将其直接转变为汇编仍有些不好处理，因此引入一个扩展的x86语言，\textbf{x86-E}语言。\textbf{x86-E}语言仍然保留变量的设定，同时引入寄存器的概念。
+\textbf{Flat}语言是一个平整的语言，与汇编代码只有些微的差别。但将其直接转变为汇编仍有些不好处理，因此引入一个扩展的x86语言，\textbf{x86-E}语言。\textbf{x86-E}语言仍然保留变量的设定，同时引入寄存器的概念。其语法如下。
 
 \begin{equation}
 \begin{aligned}
   \label{eq:4}
-   Program \quad &::= \quad { MovOrAddExp }^* \\
+   Program \quad &::= \quad { MovOrAddExp }^+ \\
    MovOrAddExp \quad &::= \quad \{ movq \quad | \quad addq \} \quad S \quad  D  \\
    S \quad &::= \quad Reg \quad | \quad Var \quad | \quad Int \\
    D \quad &::=  \quad Reg \quad | \quad Var
 \end{aligned}
 \end{equation}
+
+\textbf{x86-E}语言以多个Move或者Add表达式组成。S（source）代表的是源数据，D（destination）代表的是目标地址。movq代表将S中存储的值移动到D中。addq代表中S+D的值赋值给D。movq和addq中的“q”代表的操作的是64位即8byte的数据。S可以是寄存器Reg、变量Var或者整数Int。D可以是寄存器Reg或者变量Var。目前只会用到一个64位的寄存器rax，最终的返回值需要放入其中。
 
 \begin{lstlisting}[%
   language=python,
@@ -239,6 +245,10 @@ def select_instruction(op_lst):
     return new_op_lst
 \end{lstlisting}
 
+转换的逻辑十分简单，对于Assign，产出一个movq以及addq指令。先将“+”法的第一个参数移动到变量中，再讲第二个参数加到变量里即可。对于Return，直接将对应的数据直接移动到寄存器rax中即可。
+
+下面是执行完select\_instruction之后的产出结果。
+
 \begin{lstlisting}[%
   language=python,
   caption={select\_instruction结果}
@@ -253,6 +263,25 @@ def select_instruction(op_lst):
 \end{lstlisting}
 
 \section{分配栈上空间}
+
+变量需要在内存中进行存放，这里选择在栈上来存放它们。寄存器rbp是当前函数运行栈的基准位置，栈的位置是向下生长，每个变量都是64位8byte。因此，这些变量分配的位置就是栈的基准位置-8，-16，…。rsp则是指向栈顶的寄存器，在程序开始执行前，需要移动栈顶来为程序执行分配足够的空间。
+
+\begin{figure}[ht]
+\centering
+\includegraphics[scale=0.3]{figs/c1/pic3.png}
+\caption{栈上空间分配}
+\label{fig:fig3}
+\end{figure}
+
+为变量分配栈上空间，\textbf{x86-E}语言中的S和D需要修改定义为如下。此时，相应的语法已经是符合\textbf{x86}语法，Deref代表对内存的访问。
+
+\begin{equation}
+\begin{aligned}
+  \label{eq:5}
+   S \quad &::= \quad Reg \quad | \quad Deref \quad | \quad Int \\
+   D \quad &::=  \quad Reg \quad | \quad Deref 
+\end{aligned}
+\end{equation}
 
 \begin{lstlisting}[%
   language=python,
@@ -285,6 +314,10 @@ def assign_home(op_lst):
     return new_op_lst
 \end{lstlisting}
 
+StackFrame中symbol\_pos\_dict用来记录每个变量相较于rbp的偏移量，frame\_size则用来记录需要占用的栈的大小。get\_var\_pos用来完成从Var到Deref的转换。在assign\_home中，依次为每个变量计算偏移量，另外，栈上分配的空间大小需要16byte对齐，在计算frame\_size需要多加留意。之后，对每条指令替换Var为Deref即可。
+
+下面是执行完assign\_home之后的产出结果。
+
 \begin{lstlisting}[%
   language=python,
   caption={assign\_home结果}
@@ -298,7 +331,11 @@ def assign_home(op_lst):
 ('movq', ('deref', 'rbp', -24), ('reg', 'rax'))
 \end{lstlisting}
 
+
+
 \section{代码修正}
+
+在\textbf{x86}中，一条指令的S和D不能同时为内存，因此需要对assign\_home的结果进行修正。只需将S先movq到寄存器rax中，再通过rax来替换原先的指令中的S即可。通过一个patch\_instuction函数即可完成。如果指令的S和D同时为Deref，则进行替换。
 
 \begin{lstlisting}[%
   language=python,
@@ -317,6 +354,8 @@ def patch_instuction(op_lst):
     return new_op_lst
 \end{lstlisting}
 
+下面是执行完patch\_instuction之后的产出结果。
+
 \begin{lstlisting}[%
   language=python,
   caption={patch结果}
@@ -333,6 +372,20 @@ def patch_instuction(op_lst):
 \end{lstlisting}
 
 \section{产出汇编代码}
+
+到此为止，已经完成了整个编译的流程，接下来需要将整个程序转变为可执行的文件。本书选择将代码输出为AT\&T样式的x86汇编，然后使用gcc来将汇编转变为可执行文件。需要注意以下几点。
+
+\begin{itemize}
+  \item “main:”是整个程序执行的入口，“.global main”表示main这个符号对外部链接器可见，链接完后的程序从此处开始执行。如果是Mac系统，则需要改为“\_main”。
+  \item 寄存器，需要在其前面添加\%，例如\%rax。
+  \item 数字，需要在前面添加\$，比如数字“1”，需要写作“\$1”。
+  \item 寄存器相对位置寻址，采用括号扩住寄存器，在括号前加偏移量的语法。例如-8(\%rbp)，代表是相对于\%rbp寄存器中存储的地址减去8所指向的内存中的内容。
+  \item 开始执行时，需要“pushq \%rbp”，“movq \%rsp, \%rbp”，保存旧rbp的值，然后将当前栈顶rsp作为当前栈的基址rbp。在执行结束后，执行相对应的“popq \%rbp”，恢复rbp为之前保留的值。
+  \item 执行程序前，将rsp减去整个程序assign\_home里分配的空间大小，执行结束后，需要加回对应的大小。
+  \item 寄存器rax被用来存放函数的返回值，最终整个程序的执行结果放在寄存器rax中。
+  \item retq最终结束整个程序，返回执行结果。
+\end{itemize}
+
 
 \begin{lstlisting}[%
   language=python,
@@ -359,6 +412,8 @@ def print_x84_64(op_lst):
     print("    retq")
 \end{lstlisting}
 
+
+
 \begin{lstlisting}[%
   language=python,
   caption={最终产出}
@@ -382,11 +437,37 @@ main:
     retq
 \end{lstlisting}
 
+上面是最终打印出来的产出汇编文本。可以将最后产出的结果粘入文件中，文件命名例如为“add.s”。在终端中调用“gcc -o add add.s”，“- o”代表最终产出的文件名。在终端中敲入“./add”进行执行，然后使用“echo \$?”即可看到程序的执行结果10。
 
-\begin{lstlisting}[language=bash,style=shellstyle]
-  gcc -o add add.s
-  ./add
-  echo $?
+\begin{lstlisting}[%
+language=bash,
+style=shellstyle,
+caption={产出最终可执行文件及运行}
+]
+gcc -o add add.s
+./add
+echo $?
 \end{lstlisting}
 
 \section{小结}
+
+现在，来总结下目前为止的工作吧。
+
+\begin{itemize}
+  \item 为了能识别每个表达式，通过scan\&parse将代码文本解析为抽象语法树。
+  \item 通过flatten，将抽象语法树打平，转变为类似汇编的结果。
+  \item 通过select\_instruction，得到与汇编基本一致的操作符。
+  \item 通过assign home，为每个变量在栈上分配空间。
+  \item 通过patch，将非法指令转变为合法的指令。
+  \item 通过print操作，打印出AT\&T格式的x86汇编。
+  \item 通过gcc，将汇编代码转换为可执行文件。
+\end{itemize}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[scale=0.3]{figs/c1/pic4.png}
+\caption{整体流程}
+\label{fig:fig4}
+\end{figure}
+
+擅长动手的同学，可以扩展加法器，添加“-”、“*”、“/”，完成一个真正的运算器。
