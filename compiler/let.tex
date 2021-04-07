@@ -1,8 +1,33 @@
 \chapter{变量绑定}
 
+本章讨论变量绑定的问题，需要处理的语言记为\textbf{Let}。与大多数编程语言一致，\textbf{Let}语言采用词法作用域(lexical scoping)，也就是静态作用域。
+
 \section{let语言}
 
-\section{词法作用域}
+\begin{lstlisting}[%
+  language=lisp,
+  caption={Let语言样例}
+]
+# a = 21; b = a; return a + b;
+(let (a 21)
+  (let (b a)
+    (+ a b)))
+=> 42
+\end{lstlisting}
+
+
+\textbf{Adder}语言的语法描述如下。
+
+\begin{equation}
+\begin{aligned}
+  \label{eq:1}
+   Program \quad &::= \quad Exp \\
+   Exp \quad &::= \quad (+ \quad Exp \quad Exp) \\
+   Exp \quad &::= \quad (let \quad (var \quad Exp) \quad Exp) \\
+   Exp \quad &::=  \quad Int
+\end{aligned}
+\end{equation}
+
 
 \section{名称归一}
 
