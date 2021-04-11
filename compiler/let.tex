@@ -1,8 +1,10 @@
 \chapter{变量绑定}
 
-本章讨论变量绑定的问题，需要处理的语言记为\textbf{Let}。与大多数编程语言一致，\textbf{Let}语言采用词法作用域(lexical scoping)，也就是静态作用域。
+本章讨论变量绑定的问题，需要处理的语言记为\textbf{Let}。与大多数编程语言一致，\textbf{Let}语言采用词法作用域(lexical scoping)，也就是静态作用域。此外，本章最后还为\textbf{Let}语言增加了一个最简单的运行时（runtime）环境。
 
 \section{let语言}
+
+下面是\textbf{Let}语言的一个样例。先将21赋值给a，然后将a赋值给b，最后返回a加b的结果42。通常为了美观和清晰，这种括号语言的缩进是在换行之后空两格。
 
 \begin{lstlisting}[%
   language=lisp,
@@ -16,23 +18,63 @@
 \end{lstlisting}
 
 
-\textbf{Adder}语言的语法描述如下。
+\textbf{Let}语言的语法描述如下。相比于\textbf{Adder}语言，新增了一个“let”表达式，用来将Exp的值绑定到一个变量上。幸运的是，上一小节的scan\&parse过程对\textbf{Let}语言仍然适用，因此我们可以直接从语法树开始处理。
 
 \begin{equation}
 \begin{aligned}
   \label{eq:1}
    Program \quad &::= \quad Exp \\
    Exp \quad &::= \quad (+ \quad Exp \quad Exp) \\
-   Exp \quad &::= \quad (let \quad (var \quad Exp) \quad Exp) \\
+   Exp \quad &::= \quad (let \quad (var \quad varExp) \quad bodyExp) \\
    Exp \quad &::=  \quad Int
 \end{aligned}
 \end{equation}
+
+在\textbf{Let}语言中。所有的变量都是通过let来引入的。对于letExp来说，其中的varExp继承父表达式的变量绑定关系，在bodyExp中var会覆盖父表达式中的同名变量。对于加法而言，其中的两个表达式分别继承父表达式的变量绑定规则。
+
+\begin{lstlisting}[%
+  language=lisp,
+  caption={变量作用域示例}
+]
+# 变量a多次绑定
+(let (a 1)
+  (+ (let (a (+ a 1))
+       a)
+	a))
+=>
+# 对变量重命名，语义等价
+(let (a.1 1)
+  (+ (let (a.2 (+ a.1 1))
+       a.2)
+	a.1))
+\end{lstlisting}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[scale=0.3]{figs/c2/pic1.png}
+\caption{变量作用域示例}
+\label{fig:fig2_1}
+\end{figure}
 
 
 \section{名称归一}
 
 \section{语法树打平}
 
+\section{选择合适的x86代码}
+
 \section{运行时}
+
+\begin{lstlisting}[%
+  language=c++,
+  caption={runtime.c}
+]
+#include <stdint.h>
+#include <stdio.h>
+
+void print_int(int64_t x) {
+  printf("%lld\n", x);
+}
+\end{lstlisting}
 
 \section{小节}
